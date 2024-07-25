@@ -4,6 +4,7 @@ import {
   createAudioPlayer,
   createAudioResource,
   joinVoiceChannel,
+  VoiceConnectionStatus,
 } from "@discordjs/voice";
 import { Client, Events, IntentsBitField } from "discord.js";
 import { join as joinPath } from "path";
@@ -51,22 +52,65 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 
     const audioPlayer = createAudioPlayer();
     // console.log(__dirname);
-    const resource = createAudioResource(
-      joinPath(__dirname, "..", "assets", "pop.mp3")
-    );
-    console.log(joinPath(__dirname, "..", "assets", "pop.mp3"));
+    // const resource = createAudioResource(
+    //   joinPath(__dirname, "..", "assets", "pop.mp3")
+    // );
+    // console.log(joinPath(__dirname, "..", "assets", "pop.mp3"));
     // createAudioResource();
-    audioPlayer.play(resource);
+    // const start = Date.now();
+    // resource.playStream.on("readable", () => {
+    // console.log(Date.now() - start);
+    // });
+    // setTimeout(() => {
+    //   console.log(resource.playbackDuration);
+    // }, 1000);
+    // audioPlayer.on(AudioPlayerStatus.Idle, () => {
+    //   // setTimeout(() => {
+    //   // this will be refactored! just testing.
+    // const newResource = createAudioResource(
+    //   joinPath(__dirname, "..", "assets", "pop.mp3")
+    // );
+    // audioPlayer.play(newResource);
+    //   // }, 3657.143);
+    // });
 
-    audioPlayer.on(AudioPlayerStatus.Idle, () => {
-      // this will be refactored! just testing.
-      const newResource = createAudioResource(
+    playResource();
+
+    function playResource() {
+      const resource = createAudioResource(
         joinPath(__dirname, "..", "assets", "pop.mp3")
       );
-      audioPlayer.play(newResource);
-    });
+      audioPlayer.play(resource);
+      resource.playStream.once("end", () => {
+        // console.log("oh");
+        // const newResource = createAudioResource(
+        //   joinPath(__dirname, "..", "assets", "pop.mp3")
+        // );
+        // audioPlayer.play(newResource);
+        playResource();
+      });
+    }
 
     const subscription = connection.subscribe(audioPlayer);
+
+    // stop playing after 5s (test)
+    setTimeout(() => {
+      subscription?.unsubscribe();
+    }, 5000);
+
+    // connection.receiver.subscribe("user id example");
+
+    connection.receiver.speaking.on("start", (userId) => {
+      console.log("user is speaking");
+    });
+
+    connection.on("stateChange", (oldState, newState) => {
+      // console.log("state changed!");
+      console.log(newState.status);
+      if (newState.status === VoiceConnectionStatus.Destroyed) {
+        console.log("disconnected");
+      }
+    });
   }
 });
 
