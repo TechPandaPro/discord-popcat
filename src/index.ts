@@ -9,6 +9,7 @@ require("dotenv").config();
 import { ChannelType, Client, Events, IntentsBitField } from "discord.js";
 // import { join as joinPath } from "path";
 import PopcatGuildManager from "./PopcatGuildManager";
+import { VoiceConnectionStatus } from "@discordjs/voice";
 
 const client = new Client({
   intents: [
@@ -24,6 +25,7 @@ client.once(Events.ClientReady, (c) => {
 });
 
 client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+  // guard clauses
   const member = newState.member;
   const channel = member?.voice.channel;
   const guild = member?.guild;
@@ -37,93 +39,110 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
   )
     return;
 
-  if (
-    (oldState.selfMute || oldState.channelId !== newState.channelId) &&
-    newState.channelId &&
-    !newState.selfMute
-  ) {
-    console.log("join");
+  if (oldState.channelId !== newState.channelId && newState.channelId) {
     const popcatGuild = popcatGuilds.fetchGuild(guild.id);
     popcatGuild.joinChannel(channel);
-    popcatGuild.setLoop(true);
-    popcatGuild.playPopAudio();
-    setTimeout(() => {
-      popcatGuild.stopPopAudio();
-    }, 10000);
+    // if (!popcatGuild.connection) popcatGuild.joinChannel(channel);
+    if (!popcatGuild.connection) return;
+    popcatGuild.connection.receiver.speaking.on("start", (userId) => {
+      const speakingMember = channel.members.get(userId);
+      if (!speakingMember || speakingMember.user.bot) return;
+      console.log(`user is speaking ${Date.now()}`);
+      if (!popcatGuild.playing) popcatGuild.playPopAudio();
+    });
   }
+
   // if (
-  //   (oldState.selfMute || !oldState.channelId) &&
+  //   (oldState.selfMute || oldState.channelId !== newState.channelId) &&
   //   newState.channelId &&
   //   !newState.selfMute
   // ) {
-  //   // console.log("join!!");
-  //   // console.log(clientMember.voice.channel);
+  //   // console.log("join");
+  //   const popcatGuild = popcatGuilds.fetchGuild(guild.id);
+  //   popcatGuild.joinChannel(channel);
+  //   popcatGuild.setLoop(true);
+  //   popcatGuild.playPopAudio();
+  //   setTimeout(() => {
+  //     popcatGuild.stopPopAudio(true);
+  //   }, 10000);
 
-  //   const connection = joinVoiceChannel({
-  //     channelId: channel.id,
-  //     guildId: guild.id,
-  //     adapterCreator: guild.voiceAdapterCreator,
-  //     selfMute: false,
-  //     selfDeaf: false,
-  //   });
+  //   // TODO: consider moving some of this to the PopcatGuild class
+  //   if (popcatGuild.connection) {
+  //     popcatGuild.connection.receiver.speaking.on("start", (userId) => {
+  //       const speakingMember = channel.members.get(userId);
+  //       if (!speakingMember || speakingMember.user.bot) return;
+  //       console.log(`user is speaking ${Date.now()}`);
+  //     });
 
-  //   const audioPlayer = createAudioPlayer();
-  //   // console.log(__dirname);
-  //   // const resource = createAudioResource(
-  //   //   joinPath(__dirname, "..", "assets", "pop.mp3")
-  //   // );
-  //   // console.log(joinPath(__dirname, "..", "assets", "pop.mp3"));
-  //   // createAudioResource();
-  //   // const start = Date.now();
-  //   // resource.playStream.on("readable", () => {
-  //   // console.log(Date.now() - start);
-  //   // });
-  //   // setTimeout(() => {
-  //   //   console.log(resource.playbackDuration);
-  //   // }, 1000);
-  //   // audioPlayer.on(AudioPlayerStatus.Idle, () => {
-  //   //   // setTimeout(() => {
-  //   //   // this will be refactored! just testing.
-  //   // const newResource = createAudioResource(
-  //   //   joinPath(__dirname, "..", "assets", "pop.mp3")
-  //   // );
-  //   // audioPlayer.play(newResource);
-  //   //   // }, 3657.143);
-  //   // });
+  //     popcatGuild.connection.receiver.speaking.on("end", (userId) => {
+  //       const speakingMember = channel.members.get(userId);
+  //       if (!speakingMember || speakingMember.user.bot) return;
+  //       console.log(`user stopped speaking ${Date.now()}`);
+  //     });
 
-  //   playResource();
-
-  //   function playResource() {
-  //     const resource = createAudioResource(
-  //       joinPath(__dirname, "..", "assets", "pop.mp3")
-  //     );
-  //     audioPlayer.play(resource);
-  //     resource.playStream.once("end", () => {
-  //       playResource();
+  //     popcatGuild.connection.on("stateChange", (_oldState, newState) => {
+  //       // console.log("state changed!");
+  //       // console.log(newState.status);
+  //       if (newState.status === VoiceConnectionStatus.Destroyed) {
+  //         console.log("disconnected");
+  //       }
   //     });
   //   }
-
-  //   const subscription = connection.subscribe(audioPlayer);
-
-  //   // stop playing after 5s (test)
-  //   setTimeout(() => {
-  //     subscription?.unsubscribe();
-  //   }, 5000);
-
-  //   // connection.receiver.subscribe("user id example");
-
-  //   connection.receiver.speaking.on("start", (userId) => {
-  //     console.log("user is speaking");
-  //   });
-
-  //   connection.on("stateChange", (oldState, newState) => {
-  //     // console.log("state changed!");
-  //     console.log(newState.status);
-  //     if (newState.status === VoiceConnectionStatus.Destroyed) {
-  //       console.log("disconnected");
-  //     }
-  //   });
   // }
 });
+
+// client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+//   // guard clauses
+//   const member = newState.member;
+//   const channel = member?.voice.channel;
+//   const guild = member?.guild;
+//   const clientMember = guild?.members.me;
+//   if (
+//     !member ||
+//     !channel ||
+//     !clientMember ||
+//     member.user.bot ||
+//     channel.type === ChannelType.GuildStageVoice
+//   )
+//     return;
+
+//   if (
+//     (oldState.selfMute || oldState.channelId !== newState.channelId) &&
+//     newState.channelId &&
+//     !newState.selfMute
+//   ) {
+//     // console.log("join");
+//     const popcatGuild = popcatGuilds.fetchGuild(guild.id);
+//     popcatGuild.joinChannel(channel);
+//     popcatGuild.setLoop(true);
+//     popcatGuild.playPopAudio();
+//     setTimeout(() => {
+//       popcatGuild.stopPopAudio();
+//     }, 10000);
+
+//     // TODO: consider moving some of this to the PopcatGuild class
+//     if (popcatGuild.connection) {
+//       popcatGuild.connection.receiver.speaking.on("start", (userId) => {
+//         const speakingMember = channel.members.get(userId);
+//         if (!speakingMember || speakingMember.user.bot) return;
+//         console.log(`user is speaking ${Date.now()}`);
+//       });
+
+//       popcatGuild.connection.receiver.speaking.on("end", (userId) => {
+//         const speakingMember = channel.members.get(userId);
+//         if (!speakingMember || speakingMember.user.bot) return;
+//         console.log(`user stopped speaking ${Date.now()}`);
+//       });
+
+//       popcatGuild.connection.on("stateChange", (_oldState, newState) => {
+//         // console.log("state changed!");
+//         // console.log(newState.status);
+//         if (newState.status === VoiceConnectionStatus.Destroyed) {
+//           console.log("disconnected");
+//         }
+//       });
+//     }
+//   }
+// });
 
 client.login(process.env.DISCORD_TOKEN);
