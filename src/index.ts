@@ -53,7 +53,9 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
         const playFor = getRandomInt(5, 10);
         popcatGuild.playPopAudio({
           loop: true,
-          loopTime: 500,
+          // playCount: 5,
+          // TODO: figure out why error is thrown with these options
+          loopTime: 10000,
           waitForFinish: true,
         });
       }

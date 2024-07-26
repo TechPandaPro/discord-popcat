@@ -14,17 +14,21 @@ interface PlayAudioOptions {
   loop?: boolean;
 }
 
-interface PlayAudioOptionsLoopCount extends PlayAudioOptions {
-  loopCount?: number;
+interface PlayAudioOptionsPlayCount extends PlayAudioOptions {
+  playCount: number;
+  loopTime?: never;
+  waitForFinish?: never;
 }
 
 interface PlayAudioOptionsLoopTime extends PlayAudioOptions {
-  loopTime?: number;
+  playCount?: never;
+  loopTime: number;
   waitForFinish?: boolean;
 }
 
 interface StopAudioOptions {
   waitForFinish?: boolean;
+  // force?: boolean;
 }
 
 export default class PopcatGuild {
@@ -33,8 +37,9 @@ export default class PopcatGuild {
   #connection: VoiceConnection | null;
   #audioPlayer: AudioPlayer | null;
   #loop: boolean;
-  #loopUntil: number | null;
-  #loopsRemaining: number | null;
+  // #loopUntil: number | null;
+  #loopUntilTimeout: NodeJS.Timeout | null;
+  #playsRemaining: number | null;
   #pendingStop: boolean;
   #duration: number | null;
 
@@ -49,8 +54,9 @@ export default class PopcatGuild {
     this.#channel = null;
     this.#connection = null;
     this.#audioPlayer = null;
-    this.#loopUntil = null;
-    this.#loopsRemaining = null;
+    // this.#loopUntil = null;
+    this.#loopUntilTimeout = null;
+    this.#playsRemaining = null;
     this.#loop = false;
     this.#pendingStop = false;
     this.#duration = null;
@@ -115,14 +121,14 @@ export default class PopcatGuild {
    *
    * @param options - The play options
    * @param options.loop - Whether to loop the audio. Internally, this calls .setLoop()
-   * @param options.loopCount - How many times to loop. Looping must be enabled for this to have any effect
-   * @param options.loopTime - How many seconds to loop the audio for. Looping must be enabled for this to have any effect
+   * @param options.playCount - How many times to play the audio. Looping must be enabled for this to have any effect
+   * @param options.loopTime - How many milliseconds to continue looping the audio for. Looping must be enabled for this to have any effect
    * @param options.waitForFinish - Whether to finish the current playthrough before stopping due to loopTime. This prevents the audio from abruptly ending. Internally, this is passed to .stopPopAudio()
    */
   playPopAudio(
     options:
       | PlayAudioOptions
-      | PlayAudioOptionsLoopCount
+      | PlayAudioOptionsPlayCount
       | PlayAudioOptionsLoopTime = {}
   ) {
     if (!this.#connection)
@@ -132,7 +138,24 @@ export default class PopcatGuild {
         "Audio is already playing. Consider checking the value of .playing before calling .playPopAudio()."
       );
 
+    // TODO: make these properties functional
+    if ("loop" in options && options.loop !== undefined)
+      this.setLoop(options.loop);
+    if ("playCount" in options && options.playCount) {
+      this.#playsRemaining = options.playCount;
+      // this.getAudioDuration().then((duration) => {});
+    } else if ("loopTime" in options && options.loopTime) {
+      // this.#loopUntil = Date.now() + options.loopTime;
+      // TODO: ensure this is reset when stopped early (or loop is disabled early)
+      this.#loopUntilTimeout = setTimeout(() => {
+        this.stopPopAudio({ waitForFinish: options.waitForFinish ?? false });
+      }, options.loopTime);
+    }
+
     // if (!this.#duration) this.#duration = this.getAudioDuration();
+
+    if (this.#playsRemaining) this.#playsRemaining--;
+    console.log(this.#playsRemaining);
 
     const audioResource = this.createAudioResource();
 
@@ -141,35 +164,37 @@ export default class PopcatGuild {
       this.#connection.subscribe(this.#audioPlayer);
     }
 
-    setTimeout(() => {
-      console.log(audioResource.playbackDuration);
-    }, 500);
+    // setTimeout(() => {
+    //   console.log(audioResource.playbackDuration);
+    // }, 500);
 
     this.#audioPlayer.play(audioResource);
     audioResource.playStream.once("end", () => {
-      console.log(audioResource.playbackDuration);
+      // console.log(audioResource.playbackDuration);
+      // if (this.#loopsRemaining === 0) return (this.#loopsRemaining = null);
+      // if (this.playing) this.stopPopAudio({ force: true });
+      // TODO: consider moving this to playPopAudio() instead
+      if (this.#playsRemaining !== null && this.#playsRemaining === 0) return;
+      if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
       if (this.#loop && !this.#pendingStop) this.playPopAudio();
+      // if (this.#playsRemaining) this.#playsRemaining--;
+      // if (this.#playsRemaining === 0) return (this.#playsRemaining = null);
+      // if (this.#playsRemaining === 0) {
+      //   this.#playsRemaining = null;
+      //   this.stopPopAudio({ waitForFinish: true });
+      // }
     });
-
-    // TODO: make these properties functional
-    if ("loop" in options && options.loop !== undefined)
-      this.setLoop(options.loop);
-    if ("loopCount" in options && options.loopCount) {
-      this.#loopsRemaining = options.loopCount;
-      // this.getAudioDuration().then((duration) => {});
-    }
-    if ("loopTime" in options && options.loopTime) {
-      this.#loopUntil = Date.now() + options.loopTime;
-    }
   }
 
+  // * @param options.force - Whether to force the player to stop, irrespective of the silence padding frames
   /**
    * Stops the current audio. Audio can be restarted at any time.
    *
    * @param options - The stop options
-   * @param options.waitForFinish - Whether to finish the current playthrough (looping disregarded) before stopping. This prevents the audio from abruptly ending
+   * @param options.waitForFinish - Whether to finish the current playthrough (irrespective of looping) before stopping. This prevents the audio from abruptly ending
    */
   stopPopAudio(options: StopAudioOptions = {}) {
+    // const { waitForFinish = false, force = false } = options;
     const { waitForFinish = false } = options;
 
     if (!this.#connection)
@@ -179,6 +204,7 @@ export default class PopcatGuild {
 
     if (waitForFinish) this.#pendingStop = true;
     else this.#audioPlayer.stop();
+    // else this.#audioPlayer.stop(force);
   }
 
   /**
@@ -202,7 +228,7 @@ export default class PopcatGuild {
   /**
    * Fetches and caches the audio duration if it has not yet been cached. Returns the cached audio duration.
    *
-   * @returns The audio duration in seconds
+   * @returns The audio duration in milliseconds
    */
   private async getAudioDuration() {
     if (!this.#duration) this.#duration = await this.fetchAudioDuration();
@@ -213,12 +239,11 @@ export default class PopcatGuild {
   /**
    * Fetches the audio duration, irrespective of the cache.
    *
-   * @returns The audio duration in seconds
+   * @returns The audio duration in milliseconds
    */
   private async fetchAudioDuration() {
-    return (
-      (await parseFile(this.getAudioPath(), { duration: true })).format
-        .duration ?? null
-    );
+    const ms = (await parseFile(this.getAudioPath(), { duration: true })).format
+      .duration;
+    return ms === undefined ? null : ms * 1000;
   }
 }
