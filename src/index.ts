@@ -24,10 +24,6 @@ client.once(Events.ClientReady, (c) => {
 });
 
 client.on(Events.VoiceStateUpdate, (oldState, newState) => {
-  // console.log(oldState.channelId);
-  // console.log(newState.channelId);
-
-  // const oldMember = oldState.member;
   const member = newState.member;
   const channel = member?.voice.channel;
   const guild = member?.guild;
@@ -40,12 +36,8 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
     channel.type === ChannelType.GuildStageVoice
   )
     return;
-  // console.log(oldMember.voice);
-  // console.log(oldState);
-  // console.log(newState);
-  // console.log(member.voice.channel);
+
   if (
-    // (oldState.selfMute || !oldState.channelId) &&
     (oldState.selfMute || oldState.channelId !== newState.channelId) &&
     newState.channelId &&
     !newState.selfMute
@@ -53,6 +45,11 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
     console.log("join");
     const popcatGuild = popcatGuilds.fetchGuild(guild.id);
     popcatGuild.joinChannel(channel);
+    popcatGuild.setLoop(true);
+    popcatGuild.playPopAudio();
+    setTimeout(() => {
+      popcatGuild.stopPopAudio();
+    }, 10000);
   }
   // if (
   //   (oldState.selfMute || !oldState.channelId) &&
