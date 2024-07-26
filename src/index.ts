@@ -51,7 +51,11 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       console.log(`user is speaking ${Date.now()}`);
       if (!popcatGuild.playing) {
         const playFor = getRandomInt(5, 10);
-        popcatGuild.playPopAudio();
+        popcatGuild.playPopAudio({
+          loop: true,
+          loopTime: 500,
+          waitForFinish: true,
+        });
       }
     });
   }
