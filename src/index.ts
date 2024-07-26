@@ -1,4 +1,4 @@
-require("dotenv").config();
+import "dotenv/config";
 // import {
 //   AudioPlayerStatus,
 //   createAudioPlayer,
@@ -8,8 +8,9 @@ require("dotenv").config();
 // } from "@discordjs/voice";
 import { ChannelType, Client, Events, IntentsBitField } from "discord.js";
 // import { join as joinPath } from "path";
-import PopcatGuildManager from "./PopcatGuildManager";
-import { VoiceConnectionStatus } from "@discordjs/voice";
+import PopcatGuildManager from "./modules/PopcatGuildManager";
+// import { VoiceConnectionStatus } from "@discordjs/voice";
+import { getRandomInt } from "./modules/random";
 
 const client = new Client({
   intents: [
@@ -48,7 +49,10 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       const speakingMember = channel.members.get(userId);
       if (!speakingMember || speakingMember.user.bot) return;
       console.log(`user is speaking ${Date.now()}`);
-      if (!popcatGuild.playing) popcatGuild.playPopAudio();
+      if (!popcatGuild.playing) {
+        const playFor = getRandomInt(5, 10);
+        popcatGuild.playPopAudio();
+      }
     });
   }
 

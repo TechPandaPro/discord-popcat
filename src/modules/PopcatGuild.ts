@@ -104,8 +104,13 @@ export default class PopcatGuild {
       this.#connection.subscribe(this.#audioPlayer);
     }
 
+    setTimeout(() => {
+      console.log(audioResource.playbackDuration);
+    }, 500);
+
     this.#audioPlayer.play(audioResource);
     audioResource.playStream.once("end", () => {
+      console.log(audioResource.playbackDuration);
       if (this.#loop && !this.#pendingStop) this.playPopAudio();
     });
   }
@@ -116,14 +121,8 @@ export default class PopcatGuild {
    * @param waitForFinish - Whether to finish the current playthrough before stopping. This prevents the audio from abruptly ending. Looping is ignored.
    */
   stopPopAudio(waitForFinish: boolean = false) {
-    // TODO: add functionality to waitForFinish
     if (!this.#connection)
       throw new Error("No connection has been established");
-    // if (
-    //   !this.#audioPlayer ||
-    //   this.#audioPlayer.state.status === AudioPlayerStatus.Idle
-    // )
-    //   throw new Error("No audio is currently playing");
     if (!this.#audioPlayer || !this.playing)
       throw new Error("No audio is currently playing");
 
@@ -137,6 +136,13 @@ export default class PopcatGuild {
    * @returns The playable audio resource
    */
   private createAudioResource() {
-    return createAudioResource(joinPath(__dirname, "..", "assets", "pop.mp3"));
+    return createAudioResource(
+      joinPath(__dirname, "..", "..", "assets", "pop.mp3")
+    );
   }
+
+  // import { parseFile } from "music-metadata";
+  // parseFile(joinPath(__dirname, "..", "assets", "pop.mp3")).then((parsed) =>
+  //   console.log(parsed.format.duration)
+  // );
 }
