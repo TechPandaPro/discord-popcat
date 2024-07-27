@@ -1,16 +1,7 @@
 import "dotenv/config";
-// import {
-//   AudioPlayerStatus,
-//   createAudioPlayer,
-//   createAudioResource,
-//   joinVoiceChannel,
-//   VoiceConnectionStatus,
-// } from "@discordjs/voice";
 import { ChannelType, Client, Events, IntentsBitField } from "discord.js";
-// import { join as joinPath } from "path";
 import PopcatGuildManager from "./modules/PopcatGuildManager";
-// import { VoiceConnectionStatus } from "@discordjs/voice";
-import { getRandomInt } from "./modules/random";
+import { getRandomInt, getRandomIntInclusive } from "./modules/random";
 
 const client = new Client({
   intents: [
@@ -26,82 +17,52 @@ client.once(Events.ClientReady, (c) => {
 });
 
 client.on(Events.VoiceStateUpdate, (oldState, newState) => {
-  // guard clauses
   const member = newState.member;
-  const channel = member?.voice.channel;
   const guild = member?.guild;
-  const clientMember = guild?.members.me;
+  if (!member || member.user.bot || !guild) return;
+
+  const popcatGuild = popcatGuilds.fetchGuild(guild.id);
+
   if (
-    !member ||
-    !channel ||
-    !clientMember ||
-    member.user.bot ||
-    channel.type === ChannelType.GuildStageVoice
+    (popcatGuild.channel &&
+      popcatGuild.channel.members.filter((mem) => !mem.user.bot).size >= 1) ||
+    getRandomIntInclusive(1, 50) !== 50
   )
     return;
 
-  if (oldState.channelId !== newState.channelId && newState.channelId) {
-    const popcatGuild = popcatGuilds.fetchGuild(guild.id);
-    popcatGuild.joinChannel(channel);
-    // if (!popcatGuild.connection) popcatGuild.joinChannel(channel);
-    if (!popcatGuild.connection) return;
-    popcatGuild.connection.receiver.speaking.on("start", (userId) => {
-      const speakingMember = channel.members.get(userId);
-      if (!speakingMember || speakingMember.user.bot) return;
-      console.log(`user is speaking ${Date.now()}`);
-      if (!popcatGuild.playing) {
-        const playFor = getRandomInt(5, 10);
-        popcatGuild.playPopAudio({
-          loop: true,
-          // playCount: 5,
-          // TODO: figure out why error is thrown with these options
-          loopTime: 10000,
-          waitForFinish: true,
-        });
-      }
-    });
-    setInterval(() => {
-      console.log(popcatGuild.connection?.ping);
-    }, 500);
+  const voiceChannels = guild.channels.cache.filter(
+    (ch) => ch.isVoiceBased() && ch.type !== ChannelType.GuildStageVoice
+  );
+
+  const potentialChannels = voiceChannels.filter(
+    (ch) => ch.members.filter((mem) => !mem.user.bot).size >= 1
+  );
+
+  if (potentialChannels.size === 0) {
+    if (popcatGuild.channel) popcatGuild.leaveChannel();
+    return;
   }
 
-  // if (
-  //   (oldState.selfMute || oldState.channelId !== newState.channelId) &&
-  //   newState.channelId &&
-  //   !newState.selfMute
-  // ) {
-  //   // console.log("join");
-  //   const popcatGuild = popcatGuilds.fetchGuild(guild.id);
-  //   popcatGuild.joinChannel(channel);
-  //   popcatGuild.setLoop(true);
-  //   popcatGuild.playPopAudio();
-  //   setTimeout(() => {
-  //     popcatGuild.stopPopAudio(true);
-  //   }, 10000);
+  const channel = potentialChannels.random();
 
-  //   // TODO: consider moving some of this to the PopcatGuild class
-  //   if (popcatGuild.connection) {
-  //     popcatGuild.connection.receiver.speaking.on("start", (userId) => {
-  //       const speakingMember = channel.members.get(userId);
-  //       if (!speakingMember || speakingMember.user.bot) return;
-  //       console.log(`user is speaking ${Date.now()}`);
-  //     });
+  if (!channel) return;
 
-  //     popcatGuild.connection.receiver.speaking.on("end", (userId) => {
-  //       const speakingMember = channel.members.get(userId);
-  //       if (!speakingMember || speakingMember.user.bot) return;
-  //       console.log(`user stopped speaking ${Date.now()}`);
-  //     });
+  popcatGuild.joinChannel(channel);
 
-  //     popcatGuild.connection.on("stateChange", (_oldState, newState) => {
-  //       // console.log("state changed!");
-  //       // console.log(newState.status);
-  //       if (newState.status === VoiceConnectionStatus.Destroyed) {
-  //         console.log("disconnected");
-  //       }
-  //     });
-  //   }
-  // }
+  // TODO: consider making this a callback within PopcatGuild
+  if (!popcatGuild.connection) return;
+  popcatGuild.connection.receiver.speaking.on("start", (userId) => {
+    const speakingMember = channel.members.get(userId);
+    if (!speakingMember || speakingMember.user.bot) return;
+    if (!popcatGuild.playing && getRandomIntInclusive(1, 10) === 10) {
+      const playFor = getRandomInt(5000, 15000);
+      popcatGuild.playPopAudio({
+        loop: true,
+        loopTime: playFor,
+        waitForFinish: true,
+      });
+    }
+  });
 });
 
 // client.on(Events.VoiceStateUpdate, (oldState, newState) => {
@@ -119,42 +80,29 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 //   )
 //     return;
 
-//   if (
-//     (oldState.selfMute || oldState.channelId !== newState.channelId) &&
-//     newState.channelId &&
-//     !newState.selfMute
-//   ) {
-//     // console.log("join");
+//   if (oldState.channelId !== newState.channelId && newState.channelId) {
 //     const popcatGuild = popcatGuilds.fetchGuild(guild.id);
 //     popcatGuild.joinChannel(channel);
-//     popcatGuild.setLoop(true);
-//     popcatGuild.playPopAudio();
-//     setTimeout(() => {
-//       popcatGuild.stopPopAudio();
-//     }, 10000);
-
-//     // TODO: consider moving some of this to the PopcatGuild class
-//     if (popcatGuild.connection) {
-//       popcatGuild.connection.receiver.speaking.on("start", (userId) => {
-//         const speakingMember = channel.members.get(userId);
-//         if (!speakingMember || speakingMember.user.bot) return;
-//         console.log(`user is speaking ${Date.now()}`);
-//       });
-
-//       popcatGuild.connection.receiver.speaking.on("end", (userId) => {
-//         const speakingMember = channel.members.get(userId);
-//         if (!speakingMember || speakingMember.user.bot) return;
-//         console.log(`user stopped speaking ${Date.now()}`);
-//       });
-
-//       popcatGuild.connection.on("stateChange", (_oldState, newState) => {
-//         // console.log("state changed!");
-//         // console.log(newState.status);
-//         if (newState.status === VoiceConnectionStatus.Destroyed) {
-//           console.log("disconnected");
-//         }
-//       });
-//     }
+//     // if (!popcatGuild.connection) popcatGuild.joinChannel(channel);
+//     if (!popcatGuild.connection) return;
+//     popcatGuild.connection.receiver.speaking.on("start", (userId) => {
+//       const speakingMember = channel.members.get(userId);
+//       if (!speakingMember || speakingMember.user.bot) return;
+//       console.log(`user is speaking ${Date.now()}`);
+//       if (!popcatGuild.playing) {
+//         const playFor = getRandomInt(5, 10);
+//         popcatGuild.playPopAudio({
+//           loop: true,
+//           // playCount: 5,
+//           // TODO: √ figure out why error is thrown with these options
+//           loopTime: 10000,
+//           waitForFinish: true,
+//         });
+//       }
+//     });
+//     setInterval(() => {
+//       console.log(popcatGuild.connection?.ping);
+//     }, 500);
 //   }
 // });
 

@@ -66,6 +66,13 @@ export default class PopcatGuild {
   }
 
   /**
+   * @returns The current voice channel, or null if there is none
+   */
+  get channel() {
+    return this.connection && this.#channel ? this.#channel : null;
+  }
+
+  /**
    * @returns The current voice connection, or null if there is none
    */
   get connection() {
@@ -193,8 +200,8 @@ export default class PopcatGuild {
       // console.log(audioResource.playbackDuration);
       // if (this.#loopsRemaining === 0) return (this.#loopsRemaining = null);
       // if (this.playing) this.stopPopAudio({ force: true });
-      // TODO: consider moving this to playPopAudio() instead
       if (this.#playsRemaining !== null && this.#playsRemaining === 0) return;
+      // TODO: consider moving this to playPopAudio() instead
       if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
       if (this.#loop && !this.#pendingStop) this.playPopAudio();
       // if (this.#playsRemaining) this.#playsRemaining--;
