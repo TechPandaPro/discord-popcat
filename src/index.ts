@@ -60,6 +60,9 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
         });
       }
     });
+    setInterval(() => {
+      console.log(popcatGuild.connection?.ping);
+    }, 500);
   }
 
   // if (

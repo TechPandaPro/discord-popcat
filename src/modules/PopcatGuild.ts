@@ -5,6 +5,7 @@ import {
   createAudioResource,
   joinVoiceChannel,
   VoiceConnection,
+  VoiceConnectionStatus,
 } from "@discordjs/voice";
 import { Client, VoiceChannel } from "discord.js";
 import { parseFile } from "music-metadata";
@@ -33,6 +34,7 @@ interface StopAudioOptions {
 
 export default class PopcatGuild {
   #client: Client;
+  #guildId: string;
   #channel: VoiceChannel | null;
   #connection: VoiceConnection | null;
   #audioPlayer: AudioPlayer | null;
@@ -49,8 +51,9 @@ export default class PopcatGuild {
    *
    * @param client - The Discord client
    */
-  constructor(client: Client) {
+  constructor(client: Client, guildId: string) {
     this.#client = client;
+    this.#guildId = guildId;
     this.#channel = null;
     this.#connection = null;
     this.#audioPlayer = null;
@@ -67,16 +70,24 @@ export default class PopcatGuild {
    */
   get connection() {
     // TODO: verify that this does, indeed, always return null if there is none
-    return this.#connection;
+    // return this.#connection;
+    console.log(this.#connection?.state.status);
+    return this.#connection &&
+      (this.#connection?.state.status === VoiceConnectionStatus.Destroyed ||
+        this.#connection.state.status === VoiceConnectionStatus.Disconnected)
+      ? null
+      : this.#connection;
   }
 
   /**
    * @returns Whether or not the audio is currently playing
    */
   get playing() {
+    console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
     return (
       this.#audioPlayer &&
-      this.#audioPlayer.state.status === AudioPlayerStatus.Playing
+      (this.#audioPlayer.state.status === AudioPlayerStatus.Playing ||
+        this.#audioPlayer?.state.status === AudioPlayerStatus.Buffering)
     );
   }
 
@@ -86,6 +97,13 @@ export default class PopcatGuild {
    * @param channel - The voice channel to join
    */
   joinChannel(channel: VoiceChannel) {
+    if (channel.guild.id !== this.#guildId)
+      throw new Error(
+        `Voice channel ${channel.id} is within guild ${
+          channel.guild.id
+        }, but is expected to be within guild ${this.#guildId}`
+      );
+
     this.#channel = channel;
     // calling joinVoiceChannel in guild with an existing voice connection will cause it to switch over to new channel
     // (https://discordjs.guide/voice/voice-connections.html#creation)
@@ -131,6 +149,8 @@ export default class PopcatGuild {
       | PlayAudioOptionsPlayCount
       | PlayAudioOptionsLoopTime = {}
   ) {
+    console.log(`play at ${Date.now()}`);
+
     if (!this.#connection)
       throw new Error("No connection has been established");
     if (this.playing)
@@ -194,6 +214,8 @@ export default class PopcatGuild {
    * @param options.waitForFinish - Whether to finish the current playthrough (irrespective of looping) before stopping. This prevents the audio from abruptly ending
    */
   stopPopAudio(options: StopAudioOptions = {}) {
+    console.log(`ending at ${Date.now()}`);
+
     // const { waitForFinish = false, force = false } = options;
     const { waitForFinish = false } = options;
 

@@ -22,7 +22,8 @@ export default class PopcatGuildManager {
    * @returns The PopcatGuild object for the given server
    */
   fetchGuild(id: string) {
-    if (!(id in this.#guilds)) this.#guilds[id] = new PopcatGuild(this.#client);
+    if (!(id in this.#guilds))
+      this.#guilds[id] = new PopcatGuild(this.#client, id);
     return this.#guilds[id];
   }
 }
