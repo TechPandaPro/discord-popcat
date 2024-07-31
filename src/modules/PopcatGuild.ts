@@ -13,6 +13,7 @@ import { join as joinPath } from "path";
 
 interface PlayAudioOptions {
   loop?: boolean;
+  loud?: boolean;
 }
 
 interface PlayAudioOptionsPlayCount extends PlayAudioOptions {
@@ -32,6 +33,14 @@ interface StopAudioOptions {
   // force?: boolean;
 }
 
+interface CreateAudioResourceOptions {
+  loud?: boolean;
+}
+
+interface AudioPathOptions {
+  loud?: boolean;
+}
+
 export default class PopcatGuild {
   #client: Client;
   #guildId: string;
@@ -45,7 +54,6 @@ export default class PopcatGuild {
   #pendingStop: boolean;
   #duration: number | null;
 
-  // TODO: consider adding guild ID to class
   /**
    * Creates a new instance of PopcatGuild.
    *
@@ -146,6 +154,7 @@ export default class PopcatGuild {
    *
    * @param options - The play options
    * @param options.loop - Whether to loop the audio. Internally, this calls .setLoop()
+   * @param options.loud - Whether to play the loud version of the audio
    * @param options.playCount - How many times to play the audio. Looping must be enabled for this to have any effect
    * @param options.loopTime - How many milliseconds to continue looping the audio for. Looping must be enabled for this to have any effect
    * @param options.waitForFinish - Whether to finish the current playthrough before stopping due to loopTime. This prevents the audio from abruptly ending. Internally, this is passed to .stopPopAudio()
@@ -165,7 +174,8 @@ export default class PopcatGuild {
         "Audio is already playing. Consider checking the value of .playing before calling .playPopAudio()."
       );
 
-    // TODO: make these properties functional
+    const { loud = false } = options;
+
     if ("loop" in options && options.loop !== undefined)
       this.setLoop(options.loop);
     if ("playCount" in options && options.playCount) {
@@ -184,7 +194,7 @@ export default class PopcatGuild {
     if (this.#playsRemaining) this.#playsRemaining--;
     console.log(this.#playsRemaining);
 
-    const audioResource = this.createAudioResource();
+    const audioResource = this.createAudioResource({ loud });
 
     if (!this.#audioPlayer) {
       this.#audioPlayer = createAudioPlayer();
@@ -203,7 +213,7 @@ export default class PopcatGuild {
       if (this.#playsRemaining !== null && this.#playsRemaining === 0) return;
       // TODO: consider moving this to playPopAudio() instead
       if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
-      if (this.#loop && !this.#pendingStop) this.playPopAudio();
+      if (this.#loop && !this.#pendingStop) this.playPopAudio({ loud });
       // if (this.#playsRemaining) this.#playsRemaining--;
       // if (this.#playsRemaining === 0) return (this.#playsRemaining = null);
       // if (this.#playsRemaining === 0) {
@@ -213,6 +223,7 @@ export default class PopcatGuild {
     });
   }
 
+  // TODO: remove param from documentation
   // * @param options.force - Whether to force the player to stop, irrespective of the silence padding frames
   /**
    * Stops the current audio. Audio can be restarted at any time.
@@ -239,19 +250,31 @@ export default class PopcatGuild {
   /**
    * Returns an audio resource containing the popcat audio.
    *
+   * @param options.loud - Whether to include the loud version of the audio in the audio resource
+   *
    * @returns The playable audio resource
    */
-  private createAudioResource() {
-    return createAudioResource(this.getAudioPath());
+  private createAudioResource(options: CreateAudioResourceOptions = {}) {
+    return createAudioResource(this.getAudioPath(options));
   }
 
   /**
    * Returns the absolute file path where the popcat audio is stored.
    *
+   * @param options.loud - Whether to return the path where the loud version of the audio is stored
+   *
    * @returns The popcat audio file path
    */
-  private getAudioPath() {
-    return joinPath(__dirname, "..", "..", "assets", "pop.mp3");
+  private getAudioPath(options: AudioPathOptions = {}) {
+    const { loud = false } = options;
+
+    return joinPath(
+      __dirname,
+      "..",
+      "..",
+      "assets",
+      loud ? "pop_loud.mp3" : "pop.mp3"
+    );
   }
 
   /**

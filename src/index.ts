@@ -23,10 +23,17 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 
   const popcatGuild = popcatGuilds.fetchGuild(guild.id);
 
+  // TODO: add back randomness. commented out only for testing purposes.
+  // if (
+  //   (popcatGuild.channel &&
+  //     popcatGuild.channel.members.filter((mem) => !mem.user.bot).size >= 1) ||
+  //   getRandomIntInclusive(1, 50) !== 50
+  // )
+  //   return;
+
   if (
-    (popcatGuild.channel &&
-      popcatGuild.channel.members.filter((mem) => !mem.user.bot).size >= 1) ||
-    getRandomIntInclusive(1, 50) !== 50
+    popcatGuild.channel &&
+    popcatGuild.channel.members.filter((mem) => !mem.user.bot).size >= 1
   )
     return;
 
@@ -54,10 +61,14 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
   popcatGuild.connection.receiver.speaking.on("start", (userId) => {
     const speakingMember = channel.members.get(userId);
     if (!speakingMember || speakingMember.user.bot) return;
-    if (!popcatGuild.playing && getRandomIntInclusive(1, 10) === 10) {
+    // TODO: add back randomness. commented out only for testing purposes.
+    // if (!popcatGuild.playing && getRandomIntInclusive(1, 10) === 10) {
+    if (!popcatGuild.playing) {
       const playFor = getRandomInt(5000, 15000);
       popcatGuild.playPopAudio({
         loop: true,
+        // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
+        // loud: true,
         loopTime: playFor,
         waitForFinish: true,
       });
