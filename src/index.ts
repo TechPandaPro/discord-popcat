@@ -2,6 +2,7 @@ import "dotenv/config";
 import { ChannelType, Client, Events, IntentsBitField } from "discord.js";
 import PopcatGuildManager from "./modules/PopcatGuildManager";
 import { getRandomInt, getRandomIntInclusive } from "./modules/random";
+import { VoiceConnectionStatus } from "@discordjs/voice";
 
 const client = new Client({
   intents: [
@@ -16,7 +17,7 @@ client.once(Events.ClientReady, (c) => {
   console.log(`POP!! Client ready and logged in as ${c.user.tag}`);
 });
 
-client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+client.on(Events.VoiceStateUpdate, (_oldState, newState) => {
   const member = newState.member;
   const guild = member?.guild;
   if (!member || member.user.bot || !guild) return;
@@ -58,6 +59,14 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 
   // TODO: consider making this a callback within PopcatGuild
   if (!popcatGuild.connection) return;
+  // console.log("ran");
+  popcatGuild.connection.on(VoiceConnectionStatus.Disconnected, () => {
+    // console.log("disconnected!");
+    // console.log(popcatGuild.connection);
+    // setTimeout(() => {
+    //   console.log(popcatGuild.connection)
+    // }, 1000)
+  });
   popcatGuild.connection.receiver.speaking.on("start", (userId) => {
     const speakingMember = channel.members.get(userId);
     if (!speakingMember || speakingMember.user.bot) return;
@@ -74,6 +83,38 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       });
     }
   });
+});
+
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+  if (
+    !newState.member ||
+    !client.user ||
+    newState.member.user.id !== client.user.id
+  )
+    return;
+
+  // doesn't work since oldState.member is the same object
+  // const oldChannel = oldState.member?.voice.channel
+  // const newChannel = newState.member?.voice.channel
+
+  const oldChannel = oldState.channel;
+  const newChannel = newState.channel;
+
+  if (
+    oldChannel &&
+    oldChannel.type !== ChannelType.GuildStageVoice &&
+    (!newChannel || newChannel.members.filter((m) => !m.user.bot).size === 0)
+  ) {
+    const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
+    console.log(popcatGuild.playing);
+    if (popcatGuild.playing) popcatGuild.stopPopAudio();
+    popcatGuild.joinChannel(oldChannel);
+    console.log(popcatGuild);
+    console.log(`join back! ${Date.now()}`);
+  }
+
+  // console.log(oldChannel?.name);
+  // console.log(newChannel?.name);
 });
 
 // client.on(Events.VoiceStateUpdate, (oldState, newState) => {

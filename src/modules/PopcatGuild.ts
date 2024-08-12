@@ -86,10 +86,10 @@ export default class PopcatGuild {
   get connection() {
     // TODO: verify that this does, indeed, always return null if there is none
     // return this.#connection;
-    console.log(this.#connection?.state.status);
-    return this.#connection &&
-      (this.#connection?.state.status === VoiceConnectionStatus.Destroyed ||
-        this.#connection.state.status === VoiceConnectionStatus.Disconnected)
+    // console.log(this.#connection?.state.status);
+    return !this.#connection ||
+      this.#connection.state.status === VoiceConnectionStatus.Destroyed ||
+      this.#connection.state.status === VoiceConnectionStatus.Disconnected
       ? null
       : this.#connection;
   }
@@ -98,11 +98,11 @@ export default class PopcatGuild {
    * @returns Whether or not the audio is currently playing
    */
   get playing() {
-    console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
+    // console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
     return (
       this.#audioPlayer &&
       (this.#audioPlayer.state.status === AudioPlayerStatus.Playing ||
-        this.#audioPlayer?.state.status === AudioPlayerStatus.Buffering)
+        this.#audioPlayer.state.status === AudioPlayerStatus.Buffering)
     );
   }
 
@@ -165,7 +165,7 @@ export default class PopcatGuild {
       | PlayAudioOptionsPlayCount
       | PlayAudioOptionsLoopTime = {}
   ) {
-    console.log(`play at ${Date.now()}`);
+    // console.log(`play at ${Date.now()}`);
 
     if (!this.#connection)
       throw new Error("No connection has been established");
@@ -192,7 +192,7 @@ export default class PopcatGuild {
     // if (!this.#duration) this.#duration = this.getAudioDuration();
 
     if (this.#playsRemaining) this.#playsRemaining--;
-    console.log(this.#playsRemaining);
+    // console.log(this.#playsRemaining);
 
     const audioResource = this.createAudioResource({ loud });
 
@@ -232,7 +232,7 @@ export default class PopcatGuild {
    * @param options.waitForFinish - Whether to finish the current playthrough (irrespective of looping) before stopping. This prevents the audio from abruptly ending
    */
   stopPopAudio(options: StopAudioOptions = {}) {
-    console.log(`ending at ${Date.now()}`);
+    // console.log(`ending at ${Date.now()}`);
 
     // const { waitForFinish = false, force = false } = options;
     const { waitForFinish = false } = options;
