@@ -107,10 +107,20 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
   ) {
     const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
     console.log(popcatGuild.playing);
-    if (popcatGuild.playing) popcatGuild.stopPopAudio();
+    if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
+    // setTimeout(() => {
     popcatGuild.joinChannel(oldChannel);
+    // }, 200);
     console.log(popcatGuild);
     console.log(`join back! ${Date.now()}`);
+    popcatGuild.playPopAudio({
+      loop: true,
+      // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
+      loud: true,
+      // loopTime: playFor,
+      playCount: 2,
+      // waitForFinish: true,
+    });
   }
 
   // console.log(oldChannel?.name);

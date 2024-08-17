@@ -30,7 +30,7 @@ interface PlayAudioOptionsLoopTime extends PlayAudioOptions {
 
 interface StopAudioOptions {
   waitForFinish?: boolean;
-  // force?: boolean;
+  force?: boolean;
 }
 
 interface CreateAudioResourceOptions {
@@ -98,7 +98,7 @@ export default class PopcatGuild {
    * @returns Whether or not the audio is currently playing
    */
   get playing() {
-    // console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
+    console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
     return (
       this.#audioPlayer &&
       (this.#audioPlayer.state.status === AudioPlayerStatus.Playing ||
@@ -165,6 +165,8 @@ export default class PopcatGuild {
       | PlayAudioOptionsPlayCount
       | PlayAudioOptionsLoopTime = {}
   ) {
+    console.log("play method called");
+
     // console.log(`play at ${Date.now()}`);
 
     if (!this.#connection)
@@ -185,7 +187,8 @@ export default class PopcatGuild {
       // this.#loopUntil = Date.now() + options.loopTime;
       // TODO: ensure this is reset when stopped early (or loop is disabled early)
       this.#loopUntilTimeout = setTimeout(() => {
-        this.stopPopAudio({ waitForFinish: options.waitForFinish ?? false });
+        if (this.playing)
+          this.stopPopAudio({ waitForFinish: options.waitForFinish ?? false });
       }, options.loopTime);
     }
 
@@ -230,12 +233,13 @@ export default class PopcatGuild {
    *
    * @param options - The stop options
    * @param options.waitForFinish - Whether to finish the current playthrough (irrespective of looping) before stopping. This prevents the audio from abruptly ending
+   * @param options.force - Whether to force the player to stop, irrespective of the silence padding frames
    */
   stopPopAudio(options: StopAudioOptions = {}) {
     // console.log(`ending at ${Date.now()}`);
 
     // const { waitForFinish = false, force = false } = options;
-    const { waitForFinish = false } = options;
+    const { waitForFinish = false, force = false } = options;
 
     if (!this.#connection)
       throw new Error("No connection has been established");
@@ -243,7 +247,11 @@ export default class PopcatGuild {
       throw new Error("No audio is currently playing");
 
     if (waitForFinish) this.#pendingStop = true;
-    else this.#audioPlayer.stop();
+    else {
+      this.#audioPlayer.stop(force);
+      console.log("stopped pop audio");
+      console.log(this.#audioPlayer.state.status);
+    }
     // else this.#audioPlayer.stop(force);
   }
 
