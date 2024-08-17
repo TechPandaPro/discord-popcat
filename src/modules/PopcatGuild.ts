@@ -1,3 +1,4 @@
+// import EventEmitter from "node:events";
 import {
   AudioPlayer,
   AudioPlayerStatus,
@@ -53,6 +54,7 @@ export default class PopcatGuild {
   #playsRemaining: number | null;
   #pendingStop: boolean;
   #duration: number | null;
+  // #eventEmitter: EventEmitter;
 
   /**
    * Creates a new instance of PopcatGuild.
@@ -71,39 +73,7 @@ export default class PopcatGuild {
     this.#loop = false;
     this.#pendingStop = false;
     this.#duration = null;
-  }
-
-  /**
-   * @returns The current voice channel, or null if there is none
-   */
-  get channel() {
-    return this.connection && this.#channel ? this.#channel : null;
-  }
-
-  /**
-   * @returns The current voice connection, or null if there is none
-   */
-  get connection() {
-    // TODO: verify that this does, indeed, always return null if there is none
-    // return this.#connection;
-    // console.log(this.#connection?.state.status);
-    return !this.#connection ||
-      this.#connection.state.status === VoiceConnectionStatus.Destroyed ||
-      this.#connection.state.status === VoiceConnectionStatus.Disconnected
-      ? null
-      : this.#connection;
-  }
-
-  /**
-   * @returns Whether or not the audio is currently playing
-   */
-  get playing() {
-    console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
-    return (
-      this.#audioPlayer &&
-      (this.#audioPlayer.state.status === AudioPlayerStatus.Playing ||
-        this.#audioPlayer.state.status === AudioPlayerStatus.Buffering)
-    );
+    // this.#eventEmitter = new EventEmitter();
   }
 
   /**
@@ -254,6 +224,46 @@ export default class PopcatGuild {
     }
     // else this.#audioPlayer.stop(force);
   }
+
+  /**
+   * @returns The current voice channel, or null if there is none
+   */
+  get channel() {
+    return this.connection && this.#channel ? this.#channel : null;
+  }
+
+  /**
+   * @returns The current voice connection, or null if there is none
+   */
+  get connection() {
+    // TODO: verify that this does, indeed, always return null if there is none
+    // return this.#connection;
+    // console.log(this.#connection?.state.status);
+    return !this.#connection ||
+      this.#connection.state.status === VoiceConnectionStatus.Destroyed ||
+      this.#connection.state.status === VoiceConnectionStatus.Disconnected
+      ? null
+      : this.#connection;
+  }
+
+  /**
+   * @returns Whether or not the audio is currently playing
+   */
+  get playing() {
+    console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
+    return (
+      this.#audioPlayer &&
+      (this.#audioPlayer.state.status === AudioPlayerStatus.Playing ||
+        this.#audioPlayer.state.status === AudioPlayerStatus.Buffering)
+    );
+  }
+
+  // /**
+  //  * @returns The event emitter for this guild
+  //  */
+  // get eventEmitter() {
+  //   return this.#eventEmitter;
+  // }
 
   /**
    * Returns an audio resource containing the popcat audio.

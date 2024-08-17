@@ -3,6 +3,7 @@ import { ChannelType, Client, Events, IntentsBitField } from "discord.js";
 import PopcatGuildManager from "./modules/PopcatGuildManager";
 import { getRandomInt, getRandomIntInclusive } from "./modules/random";
 import { VoiceConnectionStatus } from "@discordjs/voice";
+import PopcatEventEmitter from "./modules/PopcatEventEmitter";
 
 const client = new Client({
   intents: [
@@ -12,6 +13,9 @@ const client = new Client({
 });
 
 const popcatGuilds = new PopcatGuildManager(client);
+
+const eventEmitter = new PopcatEventEmitter(client);
+eventEmitter.init();
 
 client.once(Events.ClientReady, (c) => {
   console.log(`POP!! Client ready and logged in as ${c.user.tag}`);
@@ -85,47 +89,67 @@ client.on(Events.VoiceStateUpdate, (_oldState, newState) => {
   });
 });
 
-client.on(Events.VoiceStateUpdate, (oldState, newState) => {
-  if (
-    !newState.member ||
-    !client.user ||
-    newState.member.user.id !== client.user.id
-  )
-    return;
-
-  // doesn't work since oldState.member is the same object
-  // const oldChannel = oldState.member?.voice.channel
-  // const newChannel = newState.member?.voice.channel
-
-  const oldChannel = oldState.channel;
-  const newChannel = newState.channel;
-
-  if (
-    oldChannel &&
-    oldChannel.type !== ChannelType.GuildStageVoice &&
-    (!newChannel || newChannel.members.filter((m) => !m.user.bot).size === 0)
-  ) {
-    const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
-    console.log(popcatGuild.playing);
-    if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
-    // setTimeout(() => {
-    popcatGuild.joinChannel(oldChannel);
-    // }, 200);
-    console.log(popcatGuild);
-    console.log(`join back! ${Date.now()}`);
-    popcatGuild.playPopAudio({
-      loop: true,
-      // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
-      loud: true,
-      // loopTime: playFor,
-      playCount: 2,
-      // waitForFinish: true,
-    });
-  }
-
-  // console.log(oldChannel?.name);
-  // console.log(newChannel?.name);
+eventEmitter.on("botMove", (guildId, oldChannel, newChannel) => {
+  console.log("yup! moved!");
+  const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
+  console.log(popcatGuild.playing);
+  if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
+  // setTimeout(() => {
+  popcatGuild.joinChannel(oldChannel);
+  // }, 200);
+  console.log(popcatGuild);
+  console.log(`join back! ${Date.now()}`);
+  popcatGuild.playPopAudio({
+    loop: true,
+    // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
+    loud: true,
+    // loopTime: playFor,
+    playCount: 2,
+    // waitForFinish: true,
+  });
 });
+
+// client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+//   if (
+//     !newState.member ||
+//     !client.user ||
+//     newState.member.user.id !== client.user.id
+//   )
+//     return;
+
+//   // doesn't work since oldState.member is the same object
+//   // const oldChannel = oldState.member?.voice.channel
+//   // const newChannel = newState.member?.voice.channel
+
+//   const oldChannel = oldState.channel;
+//   const newChannel = newState.channel;
+
+//   if (
+//     oldChannel &&
+//     oldChannel.type !== ChannelType.GuildStageVoice &&
+//     (!newChannel || newChannel.members.filter((m) => !m.user.bot).size === 0)
+//   ) {
+//     const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
+//     console.log(popcatGuild.playing);
+//     if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
+//     // setTimeout(() => {
+//     popcatGuild.joinChannel(oldChannel);
+//     // }, 200);
+//     console.log(popcatGuild);
+//     console.log(`join back! ${Date.now()}`);
+//     popcatGuild.playPopAudio({
+//       loop: true,
+//       // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
+//       loud: true,
+//       // loopTime: playFor,
+//       playCount: 2,
+//       // waitForFinish: true,
+//     });
+//   }
+
+//   // console.log(oldChannel?.name);
+//   // console.log(newChannel?.name);
+// });
 
 // client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 //   // guard clauses
