@@ -1,5 +1,11 @@
 import "dotenv/config";
-import { ChannelType, Client, Events, IntentsBitField } from "discord.js";
+import {
+  ChannelType,
+  Client,
+  Events,
+  IntentsBitField,
+  VoiceChannel,
+} from "discord.js";
 import PopcatGuildManager from "./modules/PopcatGuildManager";
 import { getRandomInt, getRandomIntInclusive } from "./modules/random";
 import { VoiceConnectionStatus } from "@discordjs/voice";
@@ -91,14 +97,51 @@ client.on(Events.VoiceStateUpdate, (_oldState, newState) => {
 
 console.log(eventEmitter);
 
-eventEmitter.on("botDisconnect", (guildId, oldChannel, newChannel) => {
-  console.log("yup! moved!");
-  const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
-  console.log(popcatGuild.playing);
+eventEmitter.on("botMove", (guildId, oldChannel, newChannel) => {
+  console.log("bot moved");
+
+  if (oldChannel.members.filter((m) => !m.user.bot).size === 0) return;
+
+  // const popcatGuild = popcatGuilds.fetchGuild(guildId);
+
+  // if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
+
+  // popcatGuild.joinChannel(oldChannel);
+
+  // popcatGuild.playPopAudio({
+  //   loop: true,
+  //   // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
+  //   loud: true,
+  //   // loopTime: playFor,
+  //   playCount: 2,
+  //   // waitForFinish: true,
+  // });
+  playLoudly(oldChannel);
+});
+
+// eventEmitter.on("botDisconnect", (guildId, oldChannel, newChannel) => {
+eventEmitter.on("botDisconnect", (guildId, oldChannel) => {
+  if (oldChannel.members.filter((m) => !m.user.bot).size === 0) return;
+  playLoudly(oldChannel);
+  // const popcatGuild = popcatGuilds.fetchGuild(guildId);
+  // if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
+  // popcatGuild.joinChannel(oldChannel);
+  // console.log(popcatGuild);
+  // console.log(`join back! ${Date.now()}`);
+  // popcatGuild.playPopAudio({
+  //   loop: true,
+  //   // TODO: figure out why it seems to get cut off when loud (check silence padding frames)
+  //   loud: true,
+  //   // loopTime: playFor,
+  //   playCount: 2,
+  //   // waitForFinish: true,
+  // });
+});
+
+function playLoudly(channel: VoiceChannel) {
+  const popcatGuild = popcatGuilds.fetchGuild(channel.guild.id);
   if (popcatGuild.playing) popcatGuild.stopPopAudio({ force: true });
-  // setTimeout(() => {
-  popcatGuild.joinChannel(oldChannel);
-  // }, 200);
+  popcatGuild.joinChannel(channel);
   console.log(popcatGuild);
   console.log(`join back! ${Date.now()}`);
   popcatGuild.playPopAudio({
@@ -109,7 +152,7 @@ eventEmitter.on("botDisconnect", (guildId, oldChannel, newChannel) => {
     playCount: 2,
     // waitForFinish: true,
   });
-});
+}
 
 // client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 //   if (

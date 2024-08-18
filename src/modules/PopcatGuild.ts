@@ -53,7 +53,7 @@ export default class PopcatGuild {
   #loopUntilTimeout: NodeJS.Timeout | null;
   #playsRemaining: number | null;
   #pendingStop: boolean;
-  #duration: number | null;
+  // #duration: number | null;
   // #eventEmitter: EventEmitter;
 
   /**
@@ -72,7 +72,7 @@ export default class PopcatGuild {
     this.#playsRemaining = null;
     this.#loop = false;
     this.#pendingStop = false;
-    this.#duration = null;
+    // this.#duration = null;
     // this.#eventEmitter = new EventEmitter();
   }
 
@@ -102,12 +102,18 @@ export default class PopcatGuild {
   }
 
   /**
-   * Leaves the current voice channel.
+   * Stops the current audio (if it is playing) and leaves the current voice channel.
    */
   leaveChannel() {
     if (!this.#connection)
       throw new Error("No connection has been established");
+    if (this.playing) {
+      this.stopPopAudio({ force: true });
+      console.log("should stop");
+    }
     this.#connection.destroy();
+    this.#connection = null;
+    this.#audioPlayer = null;
   }
 
   /**
@@ -117,6 +123,8 @@ export default class PopcatGuild {
    */
   setLoop(loop: boolean) {
     this.#loop = loop;
+    if (!this.#loop && this.#loopUntilTimeout)
+      clearTimeout(this.#loopUntilTimeout);
   }
 
   /**
@@ -139,12 +147,16 @@ export default class PopcatGuild {
 
     // console.log(`play at ${Date.now()}`);
 
+    console.log("part a");
+
     if (!this.#connection)
       throw new Error("No connection has been established");
     if (this.playing)
       throw new Error(
         "Audio is already playing. Consider checking the value of .playing before calling .playPopAudio()."
       );
+
+    console.log("part b");
 
     const { loud = false } = options;
 
@@ -165,6 +177,7 @@ export default class PopcatGuild {
     // if (!this.#duration) this.#duration = this.getAudioDuration();
 
     if (this.#playsRemaining) this.#playsRemaining--;
+
     // console.log(this.#playsRemaining);
 
     const audioResource = this.createAudioResource({ loud });
@@ -178,6 +191,8 @@ export default class PopcatGuild {
     //   console.log(audioResource.playbackDuration);
     // }, 500);
 
+    console.log("part c!! actually play!");
+
     this.#audioPlayer.play(audioResource);
     audioResource.playStream.once("end", () => {
       // console.log(audioResource.playbackDuration);
@@ -185,6 +200,10 @@ export default class PopcatGuild {
       // if (this.playing) this.stopPopAudio({ force: true });
       if (this.#playsRemaining !== null && this.#playsRemaining === 0) return;
       // TODO: consider moving this to playPopAudio() instead
+
+      // TODO: figure out why this.playing is sometimes true when it shouldn't be
+      // (e.g. simply join a voice channel, wait for loop to finish, then speak, and then it only plays once that time)
+
       if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
       if (this.#loop && !this.#pendingStop) this.playPopAudio({ loud });
       // if (this.#playsRemaining) this.#playsRemaining--;
@@ -196,8 +215,6 @@ export default class PopcatGuild {
     });
   }
 
-  // TODO: remove param from documentation
-  // * @param options.force - Whether to force the player to stop, irrespective of the silence padding frames
   /**
    * Stops the current audio. Audio can be restarted at any time.
    *
@@ -215,6 +232,8 @@ export default class PopcatGuild {
       throw new Error("No connection has been established");
     if (!this.#audioPlayer || !this.playing)
       throw new Error("No audio is currently playing");
+
+    if (this.#loopUntilTimeout) clearTimeout(this.#loopUntilTimeout);
 
     if (waitForFinish) this.#pendingStop = true;
     else {
@@ -250,6 +269,7 @@ export default class PopcatGuild {
    * @returns Whether or not the audio is currently playing
    */
   get playing() {
+    // console.trace(".playing()");
     console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
     return (
       this.#audioPlayer &&
@@ -295,16 +315,16 @@ export default class PopcatGuild {
     );
   }
 
-  /**
-   * Fetches and caches the audio duration if it has not yet been cached. Returns the cached audio duration.
-   *
-   * @returns The audio duration in milliseconds
-   */
-  private async getAudioDuration() {
-    if (!this.#duration) this.#duration = await this.fetchAudioDuration();
-    return this.#duration;
-    // return (await parseFile(this.getAudioPath())).format.duration;
-  }
+  // /**
+  //  * Fetches and caches the audio duration if it has not yet been cached. Returns the cached audio duration.
+  //  *
+  //  * @returns The audio duration in milliseconds
+  //  */
+  // private async getAudioDuration() {
+  //   if (!this.#duration) this.#duration = await this.fetchAudioDuration();
+  //   return this.#duration;
+  //   // return (await parseFile(this.getAudioPath())).format.duration;
+  // }
 
   /**
    * Fetches the audio duration, irrespective of the cache.

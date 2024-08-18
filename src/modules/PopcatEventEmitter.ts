@@ -1,7 +1,30 @@
 import EventEmitter from "node:events";
-import { ChannelType, Client, Events, VoiceState } from "discord.js";
+import {
+  ChannelType,
+  Client,
+  Events,
+  VoiceChannel,
+  VoiceState,
+} from "discord.js";
 
-export default class PopcatEventEmitter extends EventEmitter {
+interface PopcatEvents {
+  botMove: (
+    guildId: string,
+    oldChannel: VoiceChannel,
+    newChannel: VoiceChannel
+  ) => void;
+  botDisconnect: (guildId: string, oldChannel: VoiceChannel) => void;
+}
+
+declare interface PopcatEventEmitter {
+  on<T extends keyof PopcatEvents>(event: T, listener: PopcatEvents[T]): this;
+  emit<T extends keyof PopcatEvents>(
+    event: T,
+    ...args: Parameters<PopcatEvents[T]>
+  ): boolean;
+}
+
+class PopcatEventEmitter extends EventEmitter {
   #client: Client;
   #destroyed: boolean;
   // #callbacks: Map<(...args: any[]) => any, (...args: any[]) => any>;
@@ -104,7 +127,7 @@ export default class PopcatEventEmitter extends EventEmitter {
 
     console.log(`count: ${this.listenerCount("botDisconnect")}`);
 
-    if (newChannel)
+    if (newChannel && newChannel.type !== ChannelType.GuildStageVoice)
       this.emit("botMove", oldChannel.guild.id, oldChannel, newChannel);
     else {
       console.log("emitting botDisconnect");
@@ -112,3 +135,5 @@ export default class PopcatEventEmitter extends EventEmitter {
     }
   }
 }
+
+export default PopcatEventEmitter;
