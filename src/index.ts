@@ -89,7 +89,9 @@ client.on(Events.VoiceStateUpdate, (_oldState, newState) => {
   });
 });
 
-eventEmitter.on("botMove", (guildId, oldChannel, newChannel) => {
+console.log(eventEmitter);
+
+eventEmitter.on("botDisconnect", (guildId, oldChannel, newChannel) => {
   console.log("yup! moved!");
   const popcatGuild = popcatGuilds.fetchGuild(oldChannel.guild.id);
   console.log(popcatGuild.playing);

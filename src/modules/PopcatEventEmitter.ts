@@ -4,6 +4,14 @@ import { ChannelType, Client, Events, VoiceState } from "discord.js";
 export default class PopcatEventEmitter extends EventEmitter {
   #client: Client;
   #destroyed: boolean;
+  // #callbacks: Map<(...args: any[]) => any, (...args: any[]) => any>;
+  // #handleVoiceStateCallback:
+  //   | ((oldState: VoiceState, newState: VoiceState) => void)
+  //   | null;
+  #boundHandleVoiceStateUpdate: (
+    oldState: VoiceState,
+    newState: VoiceState
+  ) => void;
 
   /**
    * Creates a new instance of PopcatEventEmitter.
@@ -14,6 +22,9 @@ export default class PopcatEventEmitter extends EventEmitter {
     super();
     this.#client = client;
     this.#destroyed = true;
+    // this.#callbacks = [];
+    // this.#handleVoiceStateCallback = null;
+    this.#boundHandleVoiceStateUpdate = this.handleVoiceStateUpdate.bind(this);
   }
 
   /**
@@ -24,9 +35,28 @@ export default class PopcatEventEmitter extends EventEmitter {
   init() {
     if (!this.#destroyed) throw new Error("Event emitter already initialized");
 
-    this.#destroyed = true;
+    this.#destroyed = false;
 
-    this.#client.on(Events.VoiceStateUpdate, this.handleVoiceStateUpdate);
+    // if (!this.#callbacks.get(this.handleVoiceStateUpdate))
+    //   this.#callbacks.set(
+    //     this.handleVoiceStateUpdate,
+    //     (oldState: VoiceState, newState: VoiceState) =>
+    //       this.handleVoiceStateUpdate(oldState, newState)
+    //   );
+
+    // this.#handleVoiceStateCallback =
+    //   this.#handleVoiceStateCallback ??
+    //   ((oldState: VoiceState, newState: VoiceState) =>
+    //     this.handleVoiceStateUpdate(oldState, newState));
+
+    // this.#client.on(
+    //   Events.VoiceStateUpdate,
+    //   // this.#callbacks.get(this.handleVoiceStateUpdate)
+    //   this.#handleVoiceStateCallback
+    // );
+
+    // this.#client.on(Events.VoiceStateUpdate, this.handleVoiceStateUpdate);
+    this.#client.on(Events.VoiceStateUpdate, this.#boundHandleVoiceStateUpdate);
   }
 
   /**
@@ -34,9 +64,15 @@ export default class PopcatEventEmitter extends EventEmitter {
    * listeners from the Discord client.
    */
   destroy() {
+    // if (this.#destroyed || !this.#handleVoiceStateCallback)
     if (this.#destroyed) throw new Error("Event emitter already destroyed");
 
-    this.#client.off(Events.VoiceStateUpdate, this.handleVoiceStateUpdate);
+    // this.#client.off(Events.VoiceStateUpdate, this.#handleVoiceStateCallback);
+    // this.#client.off(Events.VoiceStateUpdate, this.handleVoiceStateUpdate);
+    this.#client.off(
+      Events.VoiceStateUpdate,
+      this.#boundHandleVoiceStateUpdate
+    );
 
     this.#destroyed = true;
   }
@@ -48,6 +84,8 @@ export default class PopcatEventEmitter extends EventEmitter {
    * @param newState - The voice state after the update
    */
   private handleVoiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
+    // console.log(`update! ${client.user.id}`);
+
     if (
       !newState.member ||
       !this.#client.user ||
@@ -60,8 +98,17 @@ export default class PopcatEventEmitter extends EventEmitter {
 
     if (!oldChannel || oldChannel.type === ChannelType.GuildStageVoice) return;
 
+    // console.log("yup!");
+
+    console.log(newChannel?.id);
+
+    console.log(`count: ${this.listenerCount("botDisconnect")}`);
+
     if (newChannel)
       this.emit("botMove", oldChannel.guild.id, oldChannel, newChannel);
-    else this.emit("botDisconnect", oldChannel.guild.id, oldChannel);
+    else {
+      console.log("emitting botDisconnect");
+      this.emit("botDisconnect", oldChannel.guild.id, oldChannel);
+    }
   }
 }
