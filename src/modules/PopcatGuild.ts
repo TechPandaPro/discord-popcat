@@ -1,6 +1,7 @@
 // import EventEmitter from "node:events";
 import {
   AudioPlayer,
+  AudioPlayerState,
   AudioPlayerStatus,
   createAudioPlayer,
   createAudioResource,
@@ -184,6 +185,7 @@ export default class PopcatGuild {
 
     if (!this.#audioPlayer) {
       this.#audioPlayer = createAudioPlayer();
+      this.#audioPlayer.on("stateChange", this.#handleStateChange.bind(this));
       this.#connection.subscribe(this.#audioPlayer);
     }
 
@@ -193,26 +195,70 @@ export default class PopcatGuild {
 
     console.log("part c!! actually play!");
 
+    // function handleStateChange(
+    //   this: PopcatGuild,
+    //   oldState: AudioPlayerState,
+    //   newState: AudioPlayerState
+    // ) {
+    //   // console.log(audioResource.playbackDuration);
+    //   // if (this.#loopsRemaining === 0) return (this.#loopsRemaining = null);
+    //   // if (this.playing) this.stopPopAudio({ force: true });
+
+    //   console.log(`emitted ${Date.now()}`);
+
+    //   if (
+    //     oldState.status !== AudioPlayerStatus.Playing ||
+    //     newState.status !== AudioPlayerStatus.Idle ||
+    //     (this.#playsRemaining !== null && this.#playsRemaining === 0)
+    //   )
+    //     return;
+    //   // TODO: consider moving this to playPopAudio() instead
+
+    //   // TODO: figure out why this.playing is sometimes true when it shouldn't be
+    //   // (e.g. simply join a voice channel, wait for loop to finish, then speak, and then it only plays once that time)
+
+    //   console.log("ready to loop");
+
+    //   // console.log(audioResource.silenceRemaining);
+    //   // console.log(this.#audioPlayer?.state.status);
+
+    //   if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
+    //   if (this.#loop && !this.#pendingStop) {
+    //     this.playPopAudio({ loud });
+    //     console.log("playing next in loop!");
+    //   }
+    //   // if (this.#playsRemaining) this.#playsRemaining--;
+    //   // if (this.#playsRemaining === 0) return (this.#playsRemaining = null);
+    //   // if (this.#playsRemaining === 0) {
+    //   //   this.#playsRemaining = null;
+    //   //   this.stopPopAudio({ waitForFinish: true });
+    //   // }
+    // }
     this.#audioPlayer.play(audioResource);
-    audioResource.playStream.once("end", () => {
-      // console.log(audioResource.playbackDuration);
-      // if (this.#loopsRemaining === 0) return (this.#loopsRemaining = null);
-      // if (this.playing) this.stopPopAudio({ force: true });
-      if (this.#playsRemaining !== null && this.#playsRemaining === 0) return;
-      // TODO: consider moving this to playPopAudio() instead
+    // audioResource.playStream.once("end", () => {
+    //   // console.log(audioResource.playbackDuration);
+    //   // if (this.#loopsRemaining === 0) return (this.#loopsRemaining = null);
+    //   // if (this.playing) this.stopPopAudio({ force: true });
+    //   if (this.#playsRemaining !== null && this.#playsRemaining === 0) return;
+    //   // TODO: consider moving this to playPopAudio() instead
 
-      // TODO: figure out why this.playing is sometimes true when it shouldn't be
-      // (e.g. simply join a voice channel, wait for loop to finish, then speak, and then it only plays once that time)
+    //   // TODO: figure out why this.playing is sometimes true when it shouldn't be
+    //   // (e.g. simply join a voice channel, wait for loop to finish, then speak, and then it only plays once that time)
 
-      if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
-      if (this.#loop && !this.#pendingStop) this.playPopAudio({ loud });
-      // if (this.#playsRemaining) this.#playsRemaining--;
-      // if (this.#playsRemaining === 0) return (this.#playsRemaining = null);
-      // if (this.#playsRemaining === 0) {
-      //   this.#playsRemaining = null;
-      //   this.stopPopAudio({ waitForFinish: true });
-      // }
-    });
+    //   console.log("ready to loop");
+
+    //   console.log(audioResource.silenceRemaining);
+    //   console.log(this.#audioPlayer?.state.status);
+
+    //   if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
+    //   if (this.#loop && !this.#pendingStop) this.playPopAudio({ loud });
+    //   // if (this.#playsRemaining) this.#playsRemaining--;
+    //   // if (this.#playsRemaining === 0) return (this.#playsRemaining = null);
+    //   // if (this.#playsRemaining === 0) {
+    //   //   this.#playsRemaining = null;
+    //   //   this.stopPopAudio({ waitForFinish: true });
+    //   // }
+    // });
   }
 
   /**
@@ -244,6 +290,51 @@ export default class PopcatGuild {
     // else this.#audioPlayer.stop(force);
   }
 
+  // TODO: add docs
+  #handleStateChange(
+    this: PopcatGuild,
+    oldState: AudioPlayerState,
+    newState: AudioPlayerState
+  ) {
+    // console.log(audioResource.playbackDuration);
+    // if (this.#loopsRemaining === 0) return (this.#loopsRemaining = null);
+    // if (this.playing) this.stopPopAudio({ force: true });
+
+    console.log(`emitted ${Date.now()}`);
+
+    if (
+      oldState.status !== AudioPlayerStatus.Playing ||
+      newState.status !== AudioPlayerStatus.Idle ||
+      (this.#playsRemaining !== null && this.#playsRemaining === 0)
+    )
+      return;
+    // TODO: consider moving this to playPopAudio() instead
+
+    // TODO: figure out why this.playing is sometimes true when it shouldn't be
+    // (e.g. simply join a voice channel, wait for loop to finish, then speak, and then it only plays once that time)
+
+    console.log("ready to loop");
+
+    // console.log(audioResource.silenceRemaining);
+    // console.log(this.#audioPlayer?.state.status);
+
+    if (this.playing && this.#audioPlayer) this.#audioPlayer.stop(true);
+    console.log(this.#loop);
+    console.log(!this.#pendingStop);
+    if (this.#pendingStop) this.#pendingStop = false;
+    else if (this.#loop) {
+      // TODO: make sure `loud` maintains same value
+      this.playPopAudio({ loud: false });
+      console.log("playing next in loop!");
+    }
+    // if (this.#playsRemaining) this.#playsRemaining--;
+    // if (this.#playsRemaining === 0) return (this.#playsRemaining = null);
+    // if (this.#playsRemaining === 0) {
+    //   this.#playsRemaining = null;
+    //   this.stopPopAudio({ waitForFinish: true });
+    // }
+  }
+
   /**
    * @returns The current voice channel, or null if there is none
    */
@@ -271,6 +362,7 @@ export default class PopcatGuild {
   get playing() {
     // console.trace(".playing()");
     console.log(`status: ${this.#audioPlayer?.state.status} ${Date.now()}`);
+    // console.trace();
     return (
       this.#audioPlayer &&
       (this.#audioPlayer.state.status === AudioPlayerStatus.Playing ||
@@ -293,7 +385,10 @@ export default class PopcatGuild {
    * @returns The playable audio resource
    */
   private createAudioResource(options: CreateAudioResourceOptions = {}) {
-    return createAudioResource(this.getAudioPath(options));
+    // FIXME: remove silencePaddingFrames option - this was just for testing
+    return createAudioResource(this.getAudioPath(options), {
+      silencePaddingFrames: 0,
+    });
   }
 
   /**

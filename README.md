@@ -45,7 +45,15 @@ For reference, the file should look like this, replacing `mysupersecrettoken` wi
 DISCORD_TOKEN="mysupersecrettoken"
 ```
 
-### Running
+### Bot Profile
+
+Images that can be used for the bot's profile are located within the `profile-assets` directory. A profile picture (`popcat_pfp_cropped.gif`) and banner (`banner.png`) are both provided. These assets are included for your convenience, but it is not required that you use these! If you have images of your own that you would like to use, you can certainly use those instead.
+
+Here's an example of what the bot profile might look like:
+
+![Bot profile](bot_profile.png)
+
+### Running the Bot
 
 If you've reached this point, everything should now be set up! To start the bot, simply run the command:
 
